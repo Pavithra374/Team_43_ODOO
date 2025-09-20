@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+        <h2>Work Orders</h2>
+        <form method="GET" action="{{ url_for('list_work_orders') }}" style="display: flex; gap: 0.5rem; min-width: 300px;">
+             <input type="search" name="search" placeholder="Search by Operation, Product, etc..." value="{{ search_query or '' }}">
+             <button type="submit" class="secondary" style="margin: 0;">Search</button>
+        </form>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Operation</th>
+                <th>Work Center</th>
+                <th>Finished Product</th>
+                <th>Expected Duration</th>
+                <th>Real Duration</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for wo in work_orders %}
+            <tr>
+                <td>
+                    <!-- Link to the parent MO for context -->
+                    <a href="{{ url_for('mo_detail', mo_id=wo.mo_id) }}">
+                        <strong>{{ wo.operation_name }}</strong>
+                    </a>
+                </td>
+                <td>{{ wo.work_center_name }}</td>
+                <td>{{ wo.finished_product_name }}</td>
+                <td>{{ wo.duration_minutes }} mins</td>
+                <td>{{ wo.real_duration_minutes }} mins</td>
+                <td>{{ wo.status }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center;">No work orders found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

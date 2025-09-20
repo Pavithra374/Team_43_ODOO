@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manufacturing App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <style>
+        .alert { padding: 1rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: var(--border-radius); }
+        .alert.warning { border-color: #f2a40a; background-color: #3b2e0d; color: #f2a40a; }
+        .alert.success { border-color: #43a047; background-color: #143015; color: #43a047; }
+        .alert.error { border-color: #d32f2f; background-color: #400e0e; color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <nav>
+            <ul>
+                <li><strong>MFG App</strong></li>
+            </ul>
+            <ul>
+                <li><a href="/api/manufacturing-orders" class="nav-link">Dashboard</a></li>
+                <li><a href="/api/work-orders" class="nav-link">Work Orders</a></li>
+                <li><a href="/api/products" class="nav-link">Products</a></li>
+                <li><a href="/api/work-centers" class="nav-link">Work Centers</a></li>
+                <li><a href="/api/boms" class="nav-link">Bills of Materials</a></li>
+                <li><a href="/api/stock-ledger" class="nav-link">Stock Ledger</a></li>
+                {% if current_user.is_authenticated %}
+                    <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {{ category }}" role="alert">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div id="content-wrapper">
+            </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

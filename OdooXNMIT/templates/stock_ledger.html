@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Stock Ledger</h2>
+    <p>A complete history of all inventory movements.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Product</th>
+                <th>Quantity Change</th>
+                <th>Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>{{ entry.product_name }}</td>
+                <td>
+                    {% if entry.quantity_change > 0 %}
+                        +{{ entry.quantity_change }}
+                    {% else %}
+                        {{ entry.quantity_change }}
+                    {% endif %}
+                </td>
+                <td>{{ entry.reason }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">No stock movements have been recorded yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

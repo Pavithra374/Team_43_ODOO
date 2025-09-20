@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Bills of Materials</h2>
+        <a href="{{ url_for('add_bom') }}" role="button">Add New BOM</a>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>BOM ID</th>
+                <th>BOM Name</th>
+                <th>Creates Product</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bom in boms %}
+            <tr>
+                <td>{{ bom.id }}</td>
+                <td>{{ bom.bom_name }}</td>
+                <td>{{ bom.product_name }}</td>
+                <td>
+                    <!-- This link takes you to the detail page for the specific BOM -->
+                    <a href="{{ url_for('bom_detail', bom_id=bom.id) }}">View Details</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+

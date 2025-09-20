@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <a href="{{ url_for('list_products') }}">&larr; Back to Products</a>
+    <h2>Update Stock / Create Product</h2>
+    <p>Enter a product name. If it exists, its stock will be updated. If it doesn't exist, a new product will be created (only if quantity is positive).</p>
+
+    <form method="POST">
+        <label for="name">Product Name</label>
+        <input type="text" name="name" placeholder="e.g., Wooden Leg" required>
+
+        <label for="quantity_change">Quantity to Add or Remove</label>
+        <input type="number" name="quantity_change" placeholder="e.g., 50 or -10" required>
+        <small>Use a positive number to add stock, a negative number to remove stock.</small>
+
+        <label for="description">Description (for new products only)</label>
+        <textarea name="description" placeholder="Optional: A brief description of the item"></textarea>
+
+        <button type="submit">Update Stock</button>
+    </form>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <a href="{{ url_for('list_boms') }}">&larr; Back to all BOMs</a>
+    <h2>BOM: {{ bom.bom_name }}</h2>
+    <p><strong>Creates Product:</strong> {{ bom.product_name }}</p>
+
+    <div class="grid">
+        <!-- Components Section -->
+        <article>
+            <h3>Components (Raw Materials)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Quantity Required</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for component in components %}
+                    <tr>
+                        <td>{{ component.component_name }}</td>
+                        <td>{{ component.quantity_required }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="2">No components added yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <hr>
+            <h4>Add New Component</h4>
+            <form action="{{ url_for('add_component_to_bom', bom_id=bom.id) }}" method="POST">
+                <label for="product_id">Component</label>
+                <select name="product_id" required>
+                    <option value="" disabled selected>Select a raw material</option>
+                    {% for product in all_products %}
+                        <option value="{{ product.id }}">{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+                <label for="quantity">Quantity</label>
+                <input type="number" name="quantity" required>
+                <button type="submit">Add Component</button>
+            </form>
+        </article>
+
+        <!-- Operations Section -->
+        <article>
+            <h3>Operations (Work Steps)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Operation</th>
+                        <th>Work Center</th>
+                        <th>Duration (mins)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for op in operations %}
+                    <tr>
+                        <td>{{ op.operation_name }}</td>
+                        <td>{{ op.work_center_name }}</td>
+                        <td>{{ op.duration_minutes }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3">No operations added yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <hr>
+            <h4>Add New Operation</h4>
+            <form action="{{ url_for('add_operation_to_bom', bom_id=bom.id) }}" method="POST">
+                <label for="operation_name">Operation Name</label>
+                <input type="text" name="operation_name" placeholder="e.g., Assembly" required>
+
+                <label for="work_center_id">Work Center</label>
+                <select name="work_center_id" required>
+                     <option value="" disabled selected>Select a work center</option>
+                    {% for center in all_work_centers %}
+                        <option value="{{ center.id }}">{{ center.name }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="duration">Duration (minutes)</label>
+                <input type="number" name="duration" required>
+
+                <button type="submit">Add Operation</button>
+            </form>
+        </article>
+    </div>
+{% endblock %}

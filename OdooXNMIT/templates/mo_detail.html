@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .header-actions { display: flex; gap: 0.5rem; align-items: center; }
+    .status-bar { display: flex; border: 1px solid #555; border-radius: 0.25rem; overflow: hidden; margin-left: auto; }
+    .status-bar .status { padding: 0.5rem 1rem; color: #999; }
+    .status-bar .status.active { background-color: var(--primary); color: var(--primary-inverse); font-weight: bold; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem 2rem; }
+    .form-grid label { color: #aaa; font-size: 0.9em; margin-bottom: 0.25rem; }
+    .form-grid p { margin: 0; font-weight: bold; }
+    .tabs { display: flex; border-bottom: 1px solid #555; margin-bottom: 1rem; }
+    .tab-link { padding: 0.75rem 1.5rem; border: none; background: none; color: #999; cursor: pointer; }
+    .tab-link.active { color: var(--primary); border-bottom: 2px solid var(--primary); font-weight: bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .main-layout { display: grid; grid-template-columns: 3fr 1fr; gap: 2rem; }
+    .timeline-sidebar article { padding: 1rem; background-color: var(--card-background-color); border-radius: var(--border-radius); }
+    .timeline-sidebar h5 { margin-top: 0; }
+    .timeline-sidebar p { font-size: 0.9em; margin-bottom: 0.25rem; }
+    .timeline-sidebar strong { color: var(--primary); }
+    .timeline-sidebar hr { margin: 1rem 0; }
+</style>
+
+<div id="mo-detail-container">
+    <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+        <div class="header-actions" id="header-actions-container">
+            </div>
+
+        <div class="status-bar" id="status-bar-container">
+            </div>
+    </header>
+
+    <div class="main-layout">
+        <article>
+            <div class="form-grid" id="main-details-container">
+                </div>
+            
+            <hr>
+            
+            <div class="tabs">
+                <button class="tab-link active" onclick="openTab(event, 'components')">Components</button>
+                <button class="tab-link" onclick="openTab(event, 'work-orders')">Work Orders</button>
+            </div>
+
+            <div id="components" class="tab-content active">
+                <table >
+                    <thead><tr><th>Component</th><th>Availability</th><th>To Consume</th></tr></thead>
+                    <tbody id="components-tbody">
+                        </tbody>
+                </table>
+            </div>
+
+            <div id="work-orders" class="tab-content">
+                <table>
+                    <thead><tr><th>Operation</th><th>Work Center</th><th>Planned (mins)</th><th>Real (mins)</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody id="work-orders-tbody">
+                        </tbody>
+                </table>
+            </div>
+        </article>
+
+        <aside class="timeline-sidebar" id="timeline-sidebar-container">
+            </aside>
+    </div>
+</div>
+
+<script type="application/json" id="mo-data">
+{
+    "order": {{ order | tojson | safe }},
+    "components": {{ components | tojson | safe }},
+    "work_orders": {{ work_orders | tojson | safe }},
+    "status_history": {{ status_history | tojson | safe }}
+}
+</script>
+
+<script>
+    (function() {
+        const dataElement = document.getElementById('mo-data');
+        let currentOrderData = JSON.parse(dataElement.textContent);
+
+        const handleAction = async (event) => {
+            event.preventDefault();
+            const form = event.target.closest('form');
+            if (form.matches('[onsubmit*="confirm"]')) {
+                if (!confirm('Are you sure you want to cancel this order?')) {
+                    return;
+                }
+            }
+            try {
+                const response = await fetch(form.action, { 
+                    method: 'POST', 
+                    body: new FormData(form),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                if (!response.ok) throw new Error('Action failed');
+                currentOrderData = await response.json();
+                updatePage();
+            } catch (error) {
+                console.error('Action failed:', error);
+                alert('An error occurred. Please refresh the page.');
+            }
+        };
+
+        const updatePage = () => {
+            updateHeaderActions(currentOrderData.order);
+            updateStatusBar(currentOrderData.order);
+            updateMainDetails(currentOrderData.order);
+            updateComponentsTable(currentOrderData.components);
+            updateWorkOrdersTable(currentOrderData.work_orders, currentOrderData.order);
+            updateTimelineSidebar(currentOrderData.status_history, currentOrderData.work_orders, currentOrderData.order);
+        };
+
+        function updateHeaderActions(order) {
+            const container = document.getElementById('header-actions-container');
+            let html = '';
+            
+            // --- ACCESS CONTROL REMOVED FROM THIS SECTION ---
+            if (order.status === 'Draft') {
+                html = `<form action="/manufacturing-orders/${order.id}/confirm" method="POST"><button type="submit">Confirm</button></form>`;
+            } else if (order.status !== 'Done' && order.status !== 'Cancelled') {
+                const produceDisabled = order.status !== 'To Close' ? 'disabled' : '';
+                const startDisabled = order.status !== 'Confirmed' ? 'disabled' : '';
+                html = `
+                    <form action="/manufacturing-orders/${order.id}/produce" method="POST"><button type="submit" class="contrast" ${produceDisabled}>Produce</button></form>
+                    <form action="/manufacturing-orders/${order.id}/start" method="POST"><button type="submit" ${startDisabled}>Start All Work</button></form>
+                    <form action="/manufacturing-orders/${order.id}/cancel" method="POST" onsubmit="return confirm('Are you sure?');"><button type="submit" class="secondary">Cancel</button></form>
+                `;
+            }
+            // --- END OF MODIFIED SECTION ---
+
+            html += `<a href="{{ url_for('list_manufacturing_orders') }}" role="button" class="outline">Back</a>`;
+            container.innerHTML = html;
+        }
+
+        function updateStatusBar(order) {
+            const container = document.getElementById('status-bar-container');
+            if (order.status === 'Cancelled') {
+                container.innerHTML = `<div class="status active" style="background-color: #7d3434;">Cancelled</div>`;
+                return;
+            }
+            const statuses = ['Draft', 'Confirmed', 'In-Progress', 'To Close', 'Done'];
+            let html = '';
+            statuses.forEach(s => {
+                const activeClass = order.status === s ? 'active' : '';
+                html += `<div class="status ${activeClass}">${s}</div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function updateMainDetails(order) {
+            const container = document.getElementById('main-details-container');
+            const schedDate = order.schedule_start_date ? new Date(order.schedule_start_date).toISOString().split('T')[0] : 'N/A';
+            container.innerHTML = `<div><label>Reference</label><p>MO-${String(order.id).padStart(5, '0')}</p></div><div><label>Finished Product</label><p>${order.product_name || 'N/A'}</p></div><div><label>Schedule Date</label><p>${schedDate}</p></div><div><label>Quantity</label><p>${order.quantity_to_produce} Units</p></div><div><label>Bill of Material</label><p>${order.bom_name || 'N/A'}</p></div><div><label>Assignee</label><p>${order.assignee_name || 'Not Assigned'}</p></div>`;
+        }
+
+        function updateComponentsTable(components) {
+            const tbody = document.getElementById('components-tbody');
+            if (!components || components.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3">No components defined.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = components.map(c => `<tr><td>${c.component_name}</td><td>${c.availability_status}</td><td>${c.to_consume}</td></tr>`).join('');
+        }
+
+        function updateWorkOrdersTable(work_orders, order) {
+            const tbody = document.getElementById('work-orders-tbody');
+            if (!work_orders || work_orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6">No work orders defined.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = work_orders.map(wo => {
+                let actionHtml = '';
+                if (['Confirmed', 'In Progress'].includes(order.status)) {
+                    if (wo.status === 'To Do') {
+                        actionHtml = `<form action="/work-orders/${wo.id}/start-timer" method="POST" style="margin:0;"><input type="hidden" name="mo_id" value="${order.id}"><button type="submit">▶️ Start</button></form>`;
+                    } else if (wo.status === 'In Progress') {
+                        actionHtml = `<form action="/work-orders/${wo.id}/done" method="POST" style="margin:0;"><input type="hidden" name="mo_id" value="${order.id}"><button type="submit">✔️ Done</button></form>`;
+                    }
+                }
+                return `<tr><td>${wo.operation_name}</td><td>${wo.work_center_name}</td><td>${wo.duration_minutes}</td><td>${wo.real_duration_minutes}</td><td>${wo.status}</td><td>${actionHtml}</td></tr>`;
+            }).join('');
+        }
+
+        function updateTimelineSidebar(status_history, work_orders, order) {
+            const container = document.getElementById('timeline-sidebar-container');
+            const statuses = {'Draft': null, 'Confirmed': null, 'In Progress': null, 'To Close': null, 'Done': null};
+            status_history.forEach(entry => {
+                if (statuses.hasOwnProperty(entry.status)) {
+                    statuses[entry.status] = entry.timestamp;
+                }
+            });
+            let totalDurationHtml = '<p>Total Duration: <strong>--</strong></p>';
+            if (statuses['In Progress'] && statuses['Done']) {
+                const start = new Date(statuses['In Progress']);
+                const end = new Date(statuses['Done']);
+                const durationMins = Math.round((end - start) / 60000);
+                totalDurationHtml = `<p>Total Duration: <strong>${durationMins} mins</strong></p>`;
+            }
+            let woBreakdownHtml = work_orders.map(wo => `<p><strong>${wo.operation_name}:</strong> ${wo.real_duration_minutes} mins<br><small style="color: #999;">${wo.end_time ? `Finished at ${wo.end_time}` : 'Not Finished'}</small></p>`).join('');
+            container.innerHTML = `<article><h5>Production Timeline</h5><p>Draft: <strong>${statuses['Draft'] || '--'}</strong></p><p>Confirmed: <strong>${statuses['Confirmed'] || '--'}</strong></p><p>In Progress: <strong>${statuses['In Progress'] || '--'}</strong></p><p>To Close: <strong>${statuses['To Close'] || '--'}</strong></p><p>Done: <strong>${statuses['Done'] || '--'}</strong></p>${totalDurationHtml}<hr><h5>Work Order Breakdown</h5>${woBreakdownHtml}</article>`;
+        }
+        
+        document.getElementById('mo-detail-container').addEventListener('submit', handleAction);
+        updatePage();
+    })();
+
+    function openTab(evt, tabName) {
+        let i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
+        tablinks = document.getElementsByClassName("tab-link");
+        for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+</script>
+{% endblock %}

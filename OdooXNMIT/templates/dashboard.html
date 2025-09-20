@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .kpi-nav { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .kpi-nav span { font-weight: bold; margin-right: 0.5rem; }
+    /* Changed <a> to <button> for non-navigation actions */
+    .kpi-nav button {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--primary-border);
+        border-radius: 2rem;
+        color: var(--primary);
+        background: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        line-height: 1;
+    }
+    .kpi-nav button .count { font-size: 0.9em; background-color: var(--code-background-color); padding: 0.1rem 0.4rem; border-radius: 1rem;}
+    .kpi-nav button.active {
+        background-color: var(--primary);
+        color: var(--primary-inverse);
+        border-color: var(--primary);
+    }
+    .kpi-nav button.active .count { background-color: var(--primary-inverse); color: var(--primary); }
+</style>
+    
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+    <a href="{{ url_for('add_manufacturing_order') }}" role="button" class="contrast">New Manufacturing Order</a>
+    <form id="search-form" style="display: flex; gap: 0.5rem; min-width: 300px;">
+         <input type="search" id="search-input" name="search" placeholder="Search by Reference, Product, State..." value="{{ search_query or '' }}">
+         <button type="submit" class="secondary" style="margin: 0;">Search</button>
+    </form>
+</div>
+
+<nav class="kpi-nav" id="all-filters">
+    <span>All:</span>
+    <button data-filter="All" data-owner="all" class="filter-btn active">
+         All <span class="count">{{ kpi_counts.get('All', 0) }}</span>
+    </button>
+    <button data-filter="Draft" data-owner="all" class="filter-btn">
+         Draft <span class="count">{{ kpi_counts.get('Draft', 0) }}</span>
+    </button>
+    <button data-filter="Confirmed" data-owner="all" class="filter-btn">
+         Confirmed <span class="count">{{ kpi_counts.get('Confirmed', 0) }}</span>
+    </button>
+    <button data-filter="In Progress" data-owner="all" class="filter-btn">
+         In-Progress <span class="count">{{ kpi_counts.get('In Progress', 0) }}</span>
+    </button>
+    <button data-filter="Not Assigned" data-owner="all" class="filter-btn">
+         Not Assigned <span class="count">{{ kpi_counts.get('Not Assigned', 0) }}</span>
+    </button>
+     <button data-filter="Late" data-owner="all" class="filter-btn">
+         Late <span class="count">{{ kpi_counts.get('Late', 0) }}</span>
+    </button>
+</nav>
+
+<nav class="kpi-nav" id="my-filters" style="margin-bottom: 2rem;">
+    <span>My:</span>
+    <button data-filter="Confirmed" data-owner="my" class="filter-btn">
+         Confirmed <span class="count">{{ my_kpi_counts.get('Confirmed', 0) }}</span>
+    </button>
+    <button data-filter="In Progress" data-owner="my" class="filter-btn">
+         In-Progress <span class="count">{{ my_kpi_counts.get('In Progress', 0) }}</span>
+    </button>
+     <button data-filter="Late" data-owner="my" class="filter-btn">
+         Late <span class="count">{{ my_kpi_counts.get('Late', 0) }}</span>
+    </button>
+</nav>
+
+<figure>
+<table>
+    <thead>
+        <tr>
+            <th><input type="checkbox"></th>
+            <th>Reference</th>
+            <th>Schedule Start Date</th>
+            <th>Finished Product</th>
+            <th>Component Status</th>
+            <th>Quantity</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody id="orders-table-body">
+        {% for order in manufacturing_orders %}
+        <tr>
+            <td><input type="checkbox"></td>
+            <td><a href="{{ url_for('mo_detail', mo_id=order.id) }}"><strong>MO-{{ order.id }}</strong></a></td>
+            <td>{{ order.schedule_start_date if order.schedule_start_date else 'N/A' }}</td>
+            <td>{{ order.product_name }}</td>
+            <td>{{ order.component_status }}</td>
+            <td>{{ order.quantity_to_produce }} Units</td>
+            <td>{{ order.status }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="7" style="text-align: center;">No orders match the current filter.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</figure>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        const tableBody = document.getElementById('orders-table-body');
+
+        let currentFilter = 'All';
+        let currentOwner = 'all';
+        let currentSearch = '';
+
+        async function fetchAndUpdateOrders() {
+            // Construct the API URL with query parameters
+            const url = new URL("{{ url_for('api_manufacturing_orders') }}", window.location.origin);
+            url.searchParams.set('filter', currentFilter);
+            url.searchParams.set('owner', currentOwner);
+            url.searchParams.set('search', currentSearch);
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const orders = await response.json();
+                updateTable(orders);
+            } catch (error) {
+                console.error('Fetch error:', error);
+                tableBody.innerHTML = `<tr><td colspan="7">Error loading data.</td></tr>`;
+            }
+        }
+
+        function updateTable(orders) {
+            tableBody.innerHTML = ''; // Clear existing rows
+            if (orders.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">No orders match the current filter.</td></tr>`;
+                return;
+            }
+
+            orders.forEach(order => {
+                const row = `
+                    <tr>
+                        <td><input type="checkbox"></td>
+                        <td><a href="/manufacturing-orders/${order.id}"><strong>MO-${order.id}</strong></a></td>
+                        <td>${order.schedule_start_date || 'N/A'}</td>
+                        <td>${order.product_name}</td>
+                        <td>${order.component_status}</td>
+                        <td>${order.quantity_to_produce} Units</td>
+                        <td>${order.status}</td>
+                    </tr>
+                `;
+                tableBody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Update active filter state
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Set current filter values from the button's data attributes
+                currentFilter = this.dataset.filter;
+                currentOwner = this.dataset.owner;
+                
+                fetchAndUpdateOrders();
+            });
+        });
+
+        searchForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent full page reload
+            currentSearch = searchInput.value;
+            fetchAndUpdateOrders();
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <a href="{{ url_for('list_manufacturing_orders') }}">&larr; Back to Orders</a>
+    <h2>Create New Manufacturing Order</h2>
+    <form method="POST">
+        <label for="product_id">Product to Manufacture</label>
+        <select name="product_id" required>
+            <option value="" disabled selected>Select a finished product</option>
+            {% for product in products %}
+                <option value="{{ product.id }}">{{ product.name }}</option>
+            {% endfor %}
+        </select>
+        
+        <!-- This is the crucial field that was likely missing -->
+        <label for="schedule_start_date">Schedule Start Date</label>
+        <input type="date" name="schedule_start_date" required>
+        
+        <label for="quantity">Quantity to Produce</label>
+        <input type="number" name="quantity" required>
+
+        <label for="bom_id">Bill of Materials (Recipe)</label>
+        <select name="bom_id" required>
+            <option value="" disabled selected>Select a BOM</option>
+            {% for bom in boms %}
+                <option value="{{ bom.id }}">{{ bom.name }} (for {{ bom.product_name }})</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Create Order</button>
+    </form>
+{% endblock %}

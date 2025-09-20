@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Work Centers</h2>
+        <a href="{{ url_for('add_work_center') }}" role="button">Add New Work Center</a>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Cost Per Hour ($)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for center in work_centers %}
+            <tr>
+                <td>{{ center.id }}</td>
+                <td>{{ center.name }}</td>
+                <td>{{ center.cost_per_hour }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
