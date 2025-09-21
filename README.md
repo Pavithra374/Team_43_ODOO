@@ -45,3 +45,6 @@ A modular manufacturing management app that digitizes the entire “order-to-out
 
 - `OdooXNMIT/app.py` – Main Flask app
 - `OdooXNMIT/templates/` – HTML templates
+
+
+Demo video :- https://drive.google.com/file/d/1DNBt2cSyE4cb6mHOF1VEwpvFyd9Y_EBc/view?usp=sharing
